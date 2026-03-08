@@ -26,7 +26,12 @@ router.get('/', async (req: Request, res: Response) => {
     const limitVal = Math.min(parseInt((limit as string) ?? '500'), 1000);
 
     const { rows } = await pool.query(`
-      SELECT id, lat, lng, city, country_code, type, title, date_occurred, severity, source_url, is_holocaust, is_verified
+      SELECT id,
+        CAST(lat AS FLOAT) AS lat,
+        CAST(lng AS FLOAT) AS lng,
+        city, country_code, type, title,
+        TO_CHAR(date_occurred, 'YYYY-MM-DD') AS date_occurred,
+        severity, source_url, is_holocaust, is_verified
       FROM incidents
       ${where}
       ORDER BY date_occurred DESC
