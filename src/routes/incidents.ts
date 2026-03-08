@@ -9,7 +9,7 @@ router.get('/', async (_req: Request, res: Response) => {
     const { rows } = await pool.query(`
       SELECT id, lat, lng, city, country_code, type, title, date_occurred, severity, is_holocaust, is_verified
       FROM incidents
-      WHERE status = 'published'
+      WHERE is_published = TRUE
       ORDER BY date_occurred DESC
     `);
     res.json(rows);
@@ -40,7 +40,7 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { rows } = await pool.query(
       `INSERT INTO incidents (lat, lng, city, country_code, type, title, description, date_occurred, severity, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
       [lat, lng, city, country_code, type, title, description, date_occurred, severity]
     );

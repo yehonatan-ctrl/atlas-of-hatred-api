@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const { rows } = await pool.query(`
-      SELECT code, name_en, name_he, score, police_reliable, embassy_phone
+      SELECT code, name_en, name_he, flag_emoji, score, police_reliable, embassy_info
       FROM countries
       ORDER BY score ASC
     `);
