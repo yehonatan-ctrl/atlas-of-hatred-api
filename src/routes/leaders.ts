@@ -11,7 +11,8 @@ router.get('/', async (req: Request, res: Response) => {
     const params: string[] = [];
     if (country) { params.push((country as string).toUpperCase()); query += ` AND country_code = $${params.length}`; }
     if (sentiment) { params.push(sentiment as string); query += ` AND sentiment = $${params.length}`; }
-    query += ` ORDER BY quote_date DESC`;
+    // Sort: most extreme first (negative by severity asc, then positive by severity desc)
+    query += ` ORDER BY ABS(COALESCE(severity_score, 0)) DESC, quote_date DESC`;
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
