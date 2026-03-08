@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/incidents?country=XX&limit=N&type=X&severity=N
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { country, limit, type, severity } = req.query;
+    const { country, limit, type, severity, source_org } = req.query;
     const params: (string | number)[] = [];
     let where = 'WHERE is_published = TRUE';
 
@@ -22,6 +22,10 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(parseInt(severity as string));
       where += ` AND severity >= $${params.length}`;
     }
+    if (source_org) {
+      params.push(source_org as string);
+      where += ` AND source_org = $${params.length}`;
+    }
 
     const limitVal = Math.min(parseInt((limit as string) ?? '500'), 1000);
 
@@ -31,7 +35,7 @@ router.get('/', async (req: Request, res: Response) => {
         CAST(lng AS FLOAT) AS lng,
         city, country_code, type, title,
         TO_CHAR(date_occurred, 'YYYY-MM-DD') AS date_occurred,
-        severity, source_url, is_holocaust, is_verified
+        severity, source_url, source_org, is_holocaust, is_verified
       FROM incidents
       ${where}
       ORDER BY date_occurred DESC
@@ -40,6 +44,22 @@ router.get('/', async (req: Request, res: Response) => {
     res.json(rows);
   } catch (err) {
     console.error('GET /incidents error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/incidents/sources — list available source orgs
+router.get('/sources', async (_req: Request, res: Response) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT source_org, COUNT(*) AS count
+      FROM incidents
+      WHERE is_published = TRUE AND source_org IS NOT NULL
+      GROUP BY source_org
+      ORDER BY COUNT(*) DESC
+    `);
+    res.json(rows);
+  } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
