@@ -3,15 +3,35 @@ import { pool } from '../db';
 
 const router = Router();
 
-// GET /api/incidents
-router.get('/', async (_req: Request, res: Response) => {
+// GET /api/incidents?country=XX&limit=N&type=X&severity=N
+router.get('/', async (req: Request, res: Response) => {
   try {
+    const { country, limit, type, severity } = req.query;
+    const params: (string | number)[] = [];
+    let where = 'WHERE is_published = TRUE';
+
+    if (country) {
+      params.push((country as string).toUpperCase());
+      where += ` AND country_code = $${params.length}`;
+    }
+    if (type) {
+      params.push(type as string);
+      where += ` AND type = $${params.length}`;
+    }
+    if (severity) {
+      params.push(parseInt(severity as string));
+      where += ` AND severity >= $${params.length}`;
+    }
+
+    const limitVal = Math.min(parseInt((limit as string) ?? '500'), 1000);
+
     const { rows } = await pool.query(`
-      SELECT id, lat, lng, city, country_code, type, title, date_occurred, severity, is_holocaust, is_verified
+      SELECT id, lat, lng, city, country_code, type, title, date_occurred, severity, source_url, is_holocaust, is_verified
       FROM incidents
-      WHERE is_published = TRUE
+      ${where}
       ORDER BY date_occurred DESC
-    `);
+      LIMIT ${limitVal}
+    `, params);
     res.json(rows);
   } catch (err) {
     console.error('GET /incidents error:', err);
@@ -36,13 +56,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // POST /api/incidents
 router.post('/', async (req: Request, res: Response) => {
-  const { lat, lng, city, country_code, type, title, description, date_occurred, severity } = req.body;
+  const { lat, lng, city, country_code, type, title, description, date_occurred, severity, source_url } = req.body;
   try {
     const { rows } = await pool.query(
-      `INSERT INTO incidents (lat, lng, city, country_code, type, title, description, date_occurred, severity, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO incidents (lat, lng, city, country_code, type, title, description, date_occurred, severity, source_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
-      [lat, lng, city, country_code, type, title, description, date_occurred, severity]
+      [lat, lng, city, country_code, type, title, description, date_occurred, severity, source_url]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
