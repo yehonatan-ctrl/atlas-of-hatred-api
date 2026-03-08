@@ -23,7 +23,7 @@ router.get('/:code', async (req: Request, res: Response) => {
   try {
     const { rows } = await pool.query(
       `SELECT * FROM countries WHERE code = $1`,
-      [req.params.code.toUpperCase()]
+      [(req.params.code as string).toUpperCase()]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
