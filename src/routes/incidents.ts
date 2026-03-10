@@ -27,7 +27,7 @@ router.get('/', async (req: Request, res: Response) => {
       where += ` AND source_org = $${params.length}`;
     }
 
-    const limitVal = Math.min(parseInt((limit as string) ?? '500'), 1000);
+    const limitVal = Math.min(parseInt((limit as string) ?? '10000'), 10000);
 
     const { rows } = await pool.query(`
       SELECT id,
