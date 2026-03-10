@@ -35,7 +35,7 @@ router.get('/', async (req: Request, res: Response) => {
         CAST(lng AS FLOAT) AS lng,
         city, country_code, type, title,
         TO_CHAR(date_occurred, 'YYYY-MM-DD') AS date_occurred,
-        severity, source_url, source_org, is_holocaust, is_verified
+        severity, source_url, source_org, is_holocaust, is_verified, screenshot_url
       FROM incidents
       ${where}
       ORDER BY date_occurred DESC
