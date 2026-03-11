@@ -9,6 +9,7 @@ router.get('/', async (_req: Request, res: Response) => {
     const { rows } = await pool.query(`
       SELECT code, name_en, name_he, flag_emoji,
         CAST(score AS FLOAT) AS score,
+        CAST(score_enforcement AS FLOAT) AS score_enforcement,
         police_reliable, embassy_info, key_companies
       FROM countries
       ORDER BY score ASC NULLS LAST
