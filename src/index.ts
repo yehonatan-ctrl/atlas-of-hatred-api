@@ -7,6 +7,7 @@ import incidentsRouter from './routes/incidents';
 import countriesRouter from './routes/countries';
 import testimoniesRouter from './routes/testimonies';
 import leadersRouter from './routes/leaders';
+import contactRouter from './routes/contact';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/incidents', incidentsRouter);
 app.use('/api/countries', countriesRouter);
 app.use('/api/testimonies', testimoniesRouter);
 app.use('/api/leaders', leadersRouter);
+app.use('/api/contact', contactRouter);
 
 app.listen(PORT, () => {
   console.log(`Atlas of Hatred API running on port ${PORT}`);
