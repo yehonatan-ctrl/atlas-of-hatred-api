@@ -48,6 +48,33 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/incidents/trend?country=XX
+// Returns monthly incident counts for a country (or global if no country)
+router.get('/trend', async (req: Request, res: Response) => {
+  try {
+    const { country } = req.query;
+    const params: string[] = [];
+    let where = "WHERE is_published = TRUE AND date_occurred IS NOT NULL AND date_occurred >= '2020-01-01'";
+    if (country) {
+      params.push((country as string).toUpperCase());
+      where += ` AND country_code = $${params.length}`;
+    }
+    const { rows } = await pool.query(`
+      SELECT
+        TO_CHAR(date_occurred, 'YYYY-MM') AS month,
+        COUNT(*)::int AS count
+      FROM incidents
+      ${where}
+      GROUP BY month
+      ORDER BY month
+    `, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /incidents/trend error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/incidents/sources — list available source orgs
 router.get('/sources', async (_req: Request, res: Response) => {
   try {
