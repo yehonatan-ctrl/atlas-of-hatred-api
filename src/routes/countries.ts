@@ -10,7 +10,13 @@ router.get('/', async (_req: Request, res: Response) => {
       SELECT code, name_en, name_he, flag_emoji,
         CAST(score AS FLOAT) AS score,
         CAST(score_enforcement AS FLOAT) AS score_enforcement,
-        police_reliable, embassy_info, key_companies
+        CAST(score_street AS FLOAT) AS score_street,
+        score_street_source, score_street_trend, score_street_context, score_street_source_url,
+        police_reliable, embassy_info, key_companies,
+        enforcement_law, enforcement_max, enforcement_trend, enforcement_source,
+        enforcement_law_detail, enforcement_case, enforcement_sentence,
+        enforcement_case_year, enforcement_case_assessment, enforcement_case_source,
+        icj_joined_date, icj_role, icj_statement
       FROM countries
       ORDER BY score ASC NULLS LAST
     `);
