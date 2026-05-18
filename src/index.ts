@@ -8,6 +8,7 @@ import countriesRouter from './routes/countries';
 import testimoniesRouter from './routes/testimonies';
 import leadersRouter from './routes/leaders';
 import contactRouter from './routes/contact';
+import travelWarningsRouter from './routes/travelWarnings';
 import mirrorRouter from './routes/mirror';
 import verifyNearbyRouter from './routes/verifyNearby';
 
@@ -29,6 +30,7 @@ app.use('/api/countries', countriesRouter);
 app.use('/api/testimonies', testimoniesRouter);
 app.use('/api/leaders', leadersRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api/travel-warnings', travelWarningsRouter);
 app.use('/api/mirror', mirrorRouter);
 app.use('/api/verify-nearby', verifyNearbyRouter);
 
