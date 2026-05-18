@@ -8,37 +8,67 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { country, limit, type, severity, source_org } = req.query;
     const params: (string | number)[] = [];
-    let where = 'WHERE is_published = TRUE';
+    let where = 'WHERE i.is_published = TRUE';
 
     if (country) {
       params.push((country as string).toUpperCase());
-      where += ` AND country_code = $${params.length}`;
+      where += ` AND COALESCE(i.event_country_code, i.country_code) = $${params.length}`;
     }
     if (type) {
       params.push(type as string);
-      where += ` AND type = $${params.length}`;
+      where += ` AND i.type = $${params.length}`;
     }
     if (severity) {
       params.push(parseInt(severity as string));
-      where += ` AND severity >= $${params.length}`;
+      where += ` AND i.severity >= $${params.length}`;
     }
     if (source_org) {
       params.push(source_org as string);
-      where += ` AND source_org = $${params.length}`;
+      where += ` AND COALESCE(ps.source_org, i.source_org) = $${params.length}`;
     }
 
     const limitVal = Math.min(parseInt((limit as string) ?? '10000'), 10000);
 
     const { rows } = await pool.query(`
-      SELECT id,
-        CAST(lat AS FLOAT) AS lat,
-        CAST(lng AS FLOAT) AS lng,
-        city, country_code, type, title,
-        TO_CHAR(date_occurred, 'YYYY-MM-DD') AS date_occurred,
-        severity, source_url, source_org, is_holocaust, is_verified, screenshot_url
-      FROM incidents
+      SELECT i.id,
+        CAST(i.lat AS FLOAT) AS lat,
+        CAST(i.lng AS FLOAT) AS lng,
+        i.city,
+        i.country_code,
+        COALESCE(i.event_country_code, i.country_code) AS event_country_code,
+        COALESCE(i.canonical_city, i.city) AS canonical_city,
+        i.type,
+        i.title,
+        TO_CHAR(i.date_occurred, 'YYYY-MM-DD') AS date_occurred,
+        i.severity,
+        i.source_url,
+        i.source_org,
+        ps.canonical_source_url,
+        ps.source_type,
+        ps.source_quality,
+        ps.public_evidence_summary,
+        TO_CHAR(ps.source_checked_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS source_checked_at,
+        i.event_confidence,
+        i.provenance_review_status,
+        i.report_domain,
+        i.is_holocaust,
+        i.is_verified,
+        i.screenshot_url
+      FROM incidents i
+      LEFT JOIN LATERAL (
+        SELECT canonical_source_url,
+          source_org,
+          source_type,
+          source_quality,
+          public_evidence_summary,
+          source_checked_at
+        FROM incident_sources
+        WHERE incident_id = i.id
+        ORDER BY is_primary_source DESC, created_at ASC
+        LIMIT 1
+      ) ps ON TRUE
       ${where}
-      ORDER BY date_occurred DESC
+      ORDER BY i.date_occurred DESC
       LIMIT ${limitVal}
     `, params);
     res.json(rows);
