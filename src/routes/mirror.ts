@@ -3,41 +3,28 @@ import { pool } from '../db';
 
 const router = Router();
 
-// Ensure table exists (idempotent bootstrap — mirrors testimonies pattern)
-async function ensureTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS social_mirror_reports (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      submitter_name  TEXT NOT NULL,
-      submitter_email TEXT NOT NULL,
-      platform               TEXT NOT NULL
-        CHECK (platform IN ('facebook','x','tiktok','instagram','youtube','other')),
-      original_url            TEXT,
-      original_screenshot_url TEXT,
-      original_text           TEXT,
-      post_date               DATE,
-      report_filed_date       DATE,
-      report_text             TEXT,
-      report_screenshot_url   TEXT,
-      platform_response TEXT NOT NULL DEFAULT 'no_response'
-        CHECK (platform_response IN ('removed','no_action','appealed','no_response','other')),
-      platform_response_text            TEXT,
-      platform_response_screenshot_url  TEXT,
-      platform_response_date            DATE,
-      country_iso CHAR(2),
-      status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending','approved','rejected')),
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_mirror_platform ON social_mirror_reports(platform)`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_mirror_status   ON social_mirror_reports(status)`);
+const MIRROR_MIGRATION_REQUIRED_ERROR = 'mirror reports migration required';
+
+function isUndefinedTableError(err: unknown): boolean {
+  return (
+    typeof err === 'object'
+    && err !== null
+    && 'code' in err
+    && (err as { code?: string }).code === '42P01'
+  );
+}
+
+function sendMirrorError(res: Response, err: unknown, fallbackError: string) {
+  console.error(err);
+  if (isUndefinedTableError(err)) {
+    return res.status(500).json({ error: MIRROR_MIGRATION_REQUIRED_ERROR });
+  }
+  return res.status(500).json({ error: fallbackError });
 }
 
 // ── GET /api/mirror/stats ────────────────────────────────────────────────────
 // Counts of approved reports grouped by platform and response type.
 router.get('/stats', async (_req: Request, res: Response) => {
-  await ensureTable();
   try {
     const [byPlatform, byResponse] = await Promise.all([
       pool.query(`
@@ -57,15 +44,13 @@ router.get('/stats', async (_req: Request, res: Response) => {
     ]);
     res.json({ by_platform: byPlatform.rows, by_response: byResponse.rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'stats failed' });
+    return sendMirrorError(res, err, 'stats failed');
   }
 });
 
 // ── GET /api/mirror ──────────────────────────────────────────────────────────
 // List approved reports. Supports ?platform=x&limit=50&offset=0&country=XX
 router.get('/', async (req: Request, res: Response) => {
-  await ensureTable();
   const { platform, country, limit = '50', offset = '0' } = req.query as Record<string, string>;
   const cap = Math.min(parseInt(limit, 10) || 50, 200);
   const off = parseInt(offset, 10) || 0;
@@ -95,14 +80,12 @@ router.get('/', async (req: Request, res: Response) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'fetch failed' });
+    return sendMirrorError(res, err, 'fetch failed');
   }
 });
 
 // ── GET /api/mirror/:id ──────────────────────────────────────────────────────
 router.get('/:id', async (req: Request, res: Response) => {
-  await ensureTable();
   try {
     const { rows } = await pool.query(
       `SELECT id, submitter_name, platform,
@@ -118,16 +101,13 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!rows.length) return res.status(404).json({ error: 'not found' });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'fetch failed' });
+    return sendMirrorError(res, err, 'fetch failed');
   }
 });
 
 // ── POST /api/mirror ─────────────────────────────────────────────────────────
 // Submit a new report. Starts as status='pending' awaiting admin approval.
 router.post('/', async (req: Request, res: Response) => {
-  await ensureTable();
-
   const {
     submitter_name, submitter_email,
     platform,
@@ -176,8 +156,7 @@ router.post('/', async (req: Request, res: Response) => {
     );
     res.status(201).json({ id: rows[0].id, submitted_at: rows[0].submitted_at });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'insert failed' });
+    return sendMirrorError(res, err, 'insert failed');
   }
 });
 
