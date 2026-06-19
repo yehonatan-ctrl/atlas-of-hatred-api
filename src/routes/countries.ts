@@ -7,18 +7,30 @@ const router = Router();
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const { rows } = await pool.query(`
-      SELECT code, name_en, name_he, flag_emoji,
-        CAST(score AS FLOAT) AS score,
-        CAST(score_enforcement AS FLOAT) AS score_enforcement,
-        CAST(score_street AS FLOAT) AS score_street,
-        score_street_source, score_street_trend, score_street_context, score_street_source_url,
-        police_reliable, embassy_info, key_companies,
-        enforcement_law, enforcement_max, enforcement_trend, enforcement_source,
-        enforcement_law_detail, enforcement_case, enforcement_sentence,
-        enforcement_case_year, enforcement_case_assessment, enforcement_case_source,
-        icj_joined_date, icj_role, icj_statement
-      FROM countries
-      ORDER BY score ASC NULLS LAST
+      SELECT c.code, c.name_en, c.name_he, c.flag_emoji,
+        CAST(c.score AS FLOAT) AS score,
+        CAST(c.score_enforcement AS FLOAT) AS score_enforcement,
+        CAST(c.score_street AS FLOAT) AS score_street,
+        c.score_street_source, c.score_street_trend, c.score_street_context, c.score_street_source_url,
+        c.police_reliable, c.embassy_info, c.key_companies,
+        c.enforcement_law, c.enforcement_max, c.enforcement_trend, c.enforcement_source,
+        c.enforcement_law_detail, c.enforcement_case, c.enforcement_sentence,
+        c.enforcement_case_year, c.enforcement_case_assessment, c.enforcement_case_source,
+        c.icj_joined_date, c.icj_role, c.icj_statement,
+        cdp.public_display AS country_display_public_display,
+        cdp.release_scope_bucket AS country_display_release_scope_bucket,
+        cdp.decision_status AS country_display_decision_status,
+        cdp.provisional AS country_display_provisional,
+        cdp.owner_review_required AS country_display_owner_review_required,
+        cdp.external_research_required AS country_display_external_research_required,
+        cdp.tone_guidance AS country_display_tone_guidance,
+        cdp.public_caveat AS country_display_public_caveat,
+        cdp.privacy_rule AS country_display_privacy_rule,
+        cdp.source_packet AS country_display_source_packet,
+        cdp.updated_at AS country_display_updated_at
+      FROM countries c
+      LEFT JOIN country_display_policies cdp ON cdp.country_code = c.code
+      ORDER BY c.score ASC NULLS LAST
     `);
     res.json(rows);
   } catch (err) {
@@ -31,7 +43,21 @@ router.get('/', async (_req: Request, res: Response) => {
 router.get('/:code', async (req: Request, res: Response) => {
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM countries WHERE code = $1`,
+      `SELECT c.*,
+        cdp.public_display AS country_display_public_display,
+        cdp.release_scope_bucket AS country_display_release_scope_bucket,
+        cdp.decision_status AS country_display_decision_status,
+        cdp.provisional AS country_display_provisional,
+        cdp.owner_review_required AS country_display_owner_review_required,
+        cdp.external_research_required AS country_display_external_research_required,
+        cdp.tone_guidance AS country_display_tone_guidance,
+        cdp.public_caveat AS country_display_public_caveat,
+        cdp.privacy_rule AS country_display_privacy_rule,
+        cdp.source_packet AS country_display_source_packet,
+        cdp.updated_at AS country_display_updated_at
+      FROM countries c
+      LEFT JOIN country_display_policies cdp ON cdp.country_code = c.code
+      WHERE c.code = $1`,
       [(req.params.code as string).toUpperCase()]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
