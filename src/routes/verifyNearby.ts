@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../db';
+import { assertRequestedUserMatchesAuthenticated, requireAuthenticatedUser } from '../auth';
 
 const router = Router();
 
@@ -172,6 +173,9 @@ async function loadTestimonyIdentity(testimonyId: string): Promise<{ id: string;
 
 // GET /api/verify-nearby/candidates
 router.get('/candidates', async (req: Request, res: Response) => {
+  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  if (!authenticatedUserId) return;
+
   const userId = readRequiredString(req.query.user_id);
   const cityOrPlace = readOptionalString(req.query.city_or_place);
   const countryCodeRaw = readOptionalString(req.query.country_code);
@@ -184,6 +188,7 @@ router.get('/candidates', async (req: Request, res: Response) => {
     res.status(400).json({ error: 'Missing user_id query parameter' });
     return;
   }
+  if (!assertRequestedUserMatchesAuthenticated(res, userId, authenticatedUserId)) return;
   if (limit === null) {
     res.status(400).json({ error: 'limit must be a positive integer' });
     return;
@@ -352,6 +357,9 @@ router.get('/candidates', async (req: Request, res: Response) => {
 
 // POST /api/verify-nearby/:testimonyId/verify
 router.post('/:testimonyId/verify', async (req: Request, res: Response) => {
+  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  if (!authenticatedUserId) return;
+
   const testimonyId = readRequiredString(req.params.testimonyId);
   const userId = readRequiredString(req.body.user_id);
   const verifierChoice = readRequiredString(req.body.verifier_choice);
@@ -369,6 +377,7 @@ router.post('/:testimonyId/verify', async (req: Request, res: Response) => {
     res.status(400).json({ error: 'Missing user_id' });
     return;
   }
+  if (!assertRequestedUserMatchesAuthenticated(res, userId, authenticatedUserId)) return;
   if (!verifierChoice || !VERIFIER_CHOICES.has(verifierChoice)) {
     res.status(400).json({ error: 'verifier_choice must be i_was_there, not_sure, or skip' });
     return;
@@ -463,6 +472,9 @@ router.post('/:testimonyId/verify', async (req: Request, res: Response) => {
 
 // POST /api/verify-nearby/:testimonyId/report-issue
 router.post('/:testimonyId/report-issue', async (req: Request, res: Response) => {
+  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  if (!authenticatedUserId) return;
+
   const testimonyId = readRequiredString(req.params.testimonyId);
   const userId = readRequiredString(req.body.user_id);
   const issueType = readRequiredString(req.body.issue_type);
@@ -476,6 +488,7 @@ router.post('/:testimonyId/report-issue', async (req: Request, res: Response) =>
     res.status(400).json({ error: 'Missing user_id' });
     return;
   }
+  if (!assertRequestedUserMatchesAuthenticated(res, userId, authenticatedUserId)) return;
   if (!issueType) {
     res.status(400).json({ error: 'Missing issue_type' });
     return;

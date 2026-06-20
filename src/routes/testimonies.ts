@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { Router, Request, Response } from 'express';
 import { pool } from '../db';
+import { assertRequestedUserMatchesAuthenticated, requireAuthenticatedUser } from '../auth';
 
 const router = Router();
 
@@ -124,7 +125,13 @@ router.get('/:incident_id', async (req: Request, res: Response) => {
 
 // POST /api/testimonies
 router.post('/', async (req: Request, res: Response) => {
-  const userId = readRequiredString(req.body.user_id);
+  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  if (!authenticatedUserId) return;
+
+  const requestedUserId = readRequiredString(req.body.user_id);
+  if (!assertRequestedUserMatchesAuthenticated(res, requestedUserId, authenticatedUserId)) return;
+
+  const userId = authenticatedUserId;
   const bodyText = readBodyText(req.body.body, req.body.body_text);
   const category = normalizeCategory(req.body.submission_category, req.body.category);
   const incidentType = normalizeIncidentType(req.body.incident_type);
@@ -140,10 +147,6 @@ router.post('/', async (req: Request, res: Response) => {
 
   if (!category || !SUBMISSION_CATEGORIES.has(category)) {
     res.status(400).json({ error: 'Invalid testimony submission category' });
-    return;
-  }
-  if (!userId) {
-    res.status(400).json({ error: 'Missing user account id' });
     return;
   }
   if (!bodyText) {
