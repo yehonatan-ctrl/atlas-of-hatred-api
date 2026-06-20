@@ -125,7 +125,7 @@ router.get('/:incident_id', async (req: Request, res: Response) => {
 
 // POST /api/testimonies
 router.post('/', async (req: Request, res: Response) => {
-  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  const authenticatedUserId = await requireAuthenticatedUser(req, res);
   if (!authenticatedUserId) return;
 
   const requestedUserId = readRequiredString(req.body.user_id);

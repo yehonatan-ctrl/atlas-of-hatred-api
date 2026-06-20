@@ -173,7 +173,7 @@ async function loadTestimonyIdentity(testimonyId: string): Promise<{ id: string;
 
 // GET /api/verify-nearby/candidates
 router.get('/candidates', async (req: Request, res: Response) => {
-  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  const authenticatedUserId = await requireAuthenticatedUser(req, res);
   if (!authenticatedUserId) return;
 
   const userId = readRequiredString(req.query.user_id);
@@ -357,7 +357,7 @@ router.get('/candidates', async (req: Request, res: Response) => {
 
 // POST /api/verify-nearby/:testimonyId/verify
 router.post('/:testimonyId/verify', async (req: Request, res: Response) => {
-  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  const authenticatedUserId = await requireAuthenticatedUser(req, res);
   if (!authenticatedUserId) return;
 
   const testimonyId = readRequiredString(req.params.testimonyId);
@@ -472,7 +472,7 @@ router.post('/:testimonyId/verify', async (req: Request, res: Response) => {
 
 // POST /api/verify-nearby/:testimonyId/report-issue
 router.post('/:testimonyId/report-issue', async (req: Request, res: Response) => {
-  const authenticatedUserId = requireAuthenticatedUser(req, res);
+  const authenticatedUserId = await requireAuthenticatedUser(req, res);
   if (!authenticatedUserId) return;
 
   const testimonyId = readRequiredString(req.params.testimonyId);
